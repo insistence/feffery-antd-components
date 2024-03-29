@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Form } from 'antd';
 import { isString } from 'lodash';
 import useCss from '../../../hooks/useCss';
-import useFormStore from '../../../store/formStore';
-import useFormItemStore from '../../../store/formItemStore';
 import { propTypes, defaultProps } from '../../../components/dataEntry/form/AntdFormItem.react';
 
 const { Item } = Form;
@@ -17,6 +15,7 @@ const AntdFormItem = (props) => {
         className,
         style,
         key,
+        name,
         labelCol,
         colon,
         wrapperCol,
@@ -34,19 +33,6 @@ const AntdFormItem = (props) => {
         loading_state
     } = props;
 
-    const formItemType = children.props._dashprivate_layout.type;
-    const name = children.props._dashprivate_layout.props.name || children.props._dashprivate_layout.props.id;
-
-    const validateStatuses = useFormStore((state) => state.validateStatuses);
-    const helps = useFormStore((state) => state.helps);
-    const form = useFormStore((state) => state.form);
-    const updateFormValidateStatus = useFormStore((state) => state.updateFormValidateStatus);
-    const updateValidateTrigger = useFormItemStore((state) => state.updateValidateTrigger);
-    const itemValues = useFormItemStore((state) => state[formItemType]);
-    const itemValue = useMemo(() => {
-        return itemValues && name ? { [name]: itemValues[name] } : {};
-    }, [itemValues]);
-
     if (rules) {
         rules.forEach(item => {
             // 处理表单项值为false时使用validateFields但校验规则不触发的问题
@@ -60,36 +46,11 @@ const AntdFormItem = (props) => {
         });
     }
 
-    const [count, setCount] = useState(0);
-
-    useEffect(() => {
-        updateValidateTrigger([{
-            [name]: rules ? rules.map((rule) => {
-                return rule.validateTrigger ? rule.validateTrigger : 'onChange'
-            }) : []
-        }])
-    }, [])
-
-    // 更新搜集到的最新values值
-    useEffect(() => {
-        // 用于处理初始渲染时不校验表单项
-        if (count > 0 && name && itemValue[name]) {
-            let setValue = { [name]: itemValue[name]['value'] }
-            form.setFieldsValue(setValue);
-            form.validateFields([Object.keys(setValue)[0]]).then((values) => {
-                let itemName = Object.keys(setValue)[0];
-                let itemValidateStatus = {};
-                itemValidateStatus[itemName] = true
-                updateFormValidateStatus(itemValidateStatus)
-            }).catch((errorInfo) => {
-                let itemName = Object.keys(setValue)[0];
-                let itemValidateStatus = {};
-                itemValidateStatus[itemName] = false
-                updateFormValidateStatus(itemValidateStatus)
-            });
-        }
-        setCount((prevCount) => prevCount + 1);
-    }, [name && itemValue[name] && itemValue[name]['timestamp']])
+    const validateTrigger = useMemo(() => {
+        return rules ? rules.map((rule) => {
+            return rule.validateTrigger ? rule.validateTrigger : 'onChange'
+        }) : []
+    })
 
     return (
         <Item id={id}
@@ -107,12 +68,13 @@ const AntdFormItem = (props) => {
             labelAlign={labelAlign}
             tooltip={tooltip}
             extra={extra}
-            help={help || helps[label]}
+            help={help}
             hasFeedback={hasFeedback}
             hidden={hidden}
             required={required || (rules && rules.length > 0 && rules.some(item => item.required)) ? true : false}
             rules={rules}
-            validateStatus={validateStatus || validateStatuses[label]}
+            validateStatus={validateStatus}
+            validateTrigger={validateTrigger}
             name={name}
             data-dash-is-loading={
                 (loading_state && loading_state.is_loading) || undefined

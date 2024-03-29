@@ -36,6 +36,8 @@ AntdFormItem.propTypes = {
     // 设置是否为标签添加必填*标识，默认为false
     required: PropTypes.bool,
 
+    name: PropTypes.string,
+
     // 校验规则，设置字段的校验逻辑
     rules: PropTypes.arrayOf(PropTypes.shape({
         // 仅在 type 为 array 类型时有效，用于指定数组元素的校验规则
